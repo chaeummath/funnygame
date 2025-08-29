@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>카드 뒤집기 게임</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .card {
+      width: 100px;
+      height: 100px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #1e3a8a;
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      border-radius: 0.5rem;
+    }
+    .flipped, .matched {
+      background: #facc15 !important;
+      color: black !important;
+      cursor: default;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 p-6">
+  <div class="max-w-4xl mx-auto">
+    <h1 class="text-2xl font-bold text-center mb-6">🃏 카드 뒤집기 영어 게임</h1>
+
+    <!-- 설정 영역 -->
+    <div id="settings" class="text-center space-y-4">
+      <div>
+        <label class="mr-2 font-semibold">카드 개수:</label>
+        <select id="cardCount" class="border p-2 rounded">
+          <option value="16">16 (4x4)</option>
+          <option value="24">24 (4x6)</option>
+        </select>
+      </div>
+      <div>
+        <label class="mr-2 font-semibold">플레이어 수:</label>
+        <select id="playerCount" class="border p-2 rounded">
+          <option value="2">2명</option>
+          <option value="3">3명</option>
+          <option value="4">4명</option>
+          <option value="5">5명</option>
+          <option value="6">6명</option>
+        </select>
+      </div>
+      <button onclick="startGame()" class="bg-blue-600 text-white px-4 py-2 rounded">게임 시작</button>
+    </div>
+
+    <!-- 점수판 -->
+    <div id="scoreboard" class="hidden mt-6 grid grid-cols-3 gap-4"></div>
+
+    <!-- 게임판 -->
+    <div id="gameBoard" class="mt-6 grid gap-3 justify-center"></div>
+  </div>
+
+  <script>
+    const words = [
+      ["apple", "사과"], ["book", "책"], ["dog", "개"], ["cat", "고양이"],
+      ["house", "집"], ["car", "자동차"], ["tree", "나무"], ["water", "물"],
+      ["sun", "태양"], ["moon", "달"], ["star", "별"], ["computer", "컴퓨터"]
+    ];
+
+    let selectedCards = [];
+    let lockBoard = false;
+    let players = [];
+    let currentPlayer = 0;
+    let totalCards = 0;
+
+    function startGame() {
+      const cardCount = parseInt(document.getElementById('cardCount').value);
+      const playerCount = parseInt(document.getElementById('playerCount').value);
+      totalCards = cardCount;
+
+      // 플레이어 초기화
+      players = Array.from({length: playerCount}, (_, i) => ({id: i+1, score: 0}));
+      currentPlayer = 0;
+
+      // 점수판 생성
+      const scoreboard = document.getElementById('scoreboard');
+      scoreboard.innerHTML = '';
+      players.forEach(p => {
+        const div = document.createElement('div');
+        div.id = `player-${p.id}`;
+        div.className = "p-4 bg-white rounded shadow";
+        div.innerHTML = `<h2 class='font-bold'>플레이어 ${p.id}</h2><p>점수: <span class='score'>0</span></p>`;
+        scoreboard.appendChild(div);
+      });
+      scoreboard.classList.remove('hidden');
+
+      // 단어 준비
+      const chosen = words.slice(0, cardCount/2);
+      const pairs = [];
+      chosen.forEach(([eng, kor]) => {
+        pairs.push({word: eng, pair: kor});
+        pairs.push({word: kor, pair: eng});
+      });
+
+      // 카드 섞기
+      const cards = pairs.sort(() => Math.random() - 0.5);
+
+      // 게임판 생성
+      const board = document.getElementById('gameBoard');
+      board.innerHTML = '';
+      board.style.gridTemplateColumns = `repeat(${cardCount===16?4:6}, 1fr)`;
+
+      cards.forEach((c, index) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.dataset.word = c.word;
+        card.dataset.pair = c.pair;
+        card.dataset.index = index;
+        card.onclick = () => flipCard(card);
+        board.appendChild(card);
+      });
+    }
+
+    function flipCard(card) {
+      if (lockBoard || card.classList.contains('flipped') || card.classList.contains('matched')) return;
+
+      card.textContent = card.dataset.word;
+      card.classList.add('flipped');
+      selectedCards.push(card);
+
+      if (selectedCards.length === 2) {
+        checkMatch();
+      }
+    }
+
+    function checkMatch() {
+      const [c1, c2] = selectedCards;
+      if (c1.dataset.pair === c2.dataset.word) {
+        // 맞춘 경우
+        c1.classList.add('matched');
+        c2.classList.add('matched');
+        players[currentPlayer].score++;
+        updateScore();
+        selectedCards = [];
+        // 한 번 더 진행 (턴 유지)
+      } else {
+        lockBoard = true;
+        setTimeout(() => {
+          c1.textContent = '';
+          c2.textContent = '';
+          c1.classList.remove('flipped');
+          c2.classList.remove('flipped');
+          selectedCards = [];
+          lockBoard = false;
+          // 턴 넘기기
+          currentPlayer = (currentPlayer + 1) % players.length;
+        }, 1000);
+      }
+    }
+
+    function updateScore() {
+      players.forEach(p => {
+        document.querySelector(`#player-${p.id} .score`).textContent = p.score;
+      });
+    }
+  </script>
+</body>
+</html>
